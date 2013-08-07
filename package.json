@@ -1,0 +1,15 @@
+{
+  "name": "module-drawer",
+  "version": "0.0.0",
+  "description": "An HTML drawer for displaying extra info about npm modules.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": "",
+  "author": "Dan Finlay",
+  "license": "BSD",
+  "dependencies": {
+    "npm-normalize": "~0.2.0"
+  }
+}
