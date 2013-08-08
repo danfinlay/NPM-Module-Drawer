@@ -1,19 +1,19 @@
-var request = require('browser-request')
+// var request = require('browser-request')
 var normalize = require('npm-normalize')
-var readmeGetter = require('readme-getter-browser')
+// var readmeGetter = require('readme-getter-browser')
 
 var metaDrawer = {
   selectedModule: null,
   detailSelected: 'readme',
-  cdnLink: '/'
+  cdnLink: '/',
+  sandbox: null
 };
 
 var readmeCache = {};
 
 module.exports = function(options){
 
-  console.log("browserify-cdn address set to: "+options.cdn);
-  metaDrawer.cdnLink = options.cdn || '/';
+  metaDrawer.sandbox = options.sandbox;
   var moduleLinkSelector = options.moduleLinkSelector || '.moduleLink';
   var moduleButtons = $('.moduleLink');
 
@@ -31,7 +31,6 @@ module.exports = function(options){
       updateDrawer();
     }  
   });
-
 }
 
 function updateDrawer(){
@@ -40,8 +39,10 @@ function updateDrawer(){
   if(!metaDrawer.selectedModule) {
     console.log("No module selected, hiding");
     $('#packageInfo').hide(300);
-  }else{
 
+
+
+  }else{
     //Insert drawer if it doesn't exist:
     if(!$('#packageInfo')){
       var template = 
@@ -55,16 +56,15 @@ function updateDrawer(){
           '<div id="packageDetailView" style="padding-top:10px"></div>'
         '</div>';
       link.parent().parent().after(template)
-      $('#packageInfo').show(300);
     }
 
     //Customize the displayed links:
-    var moduleLink = metaDrawer.cdnLink + '/readme/' + metaDrawer.selectedModule;      
-    $('#packageInfo currentPackageLink > a').attr('href', moduleLink)
-
-    var detailView = $('#packageDetailView');
+    var npmLink = 'http://www.npmjs.org/'+metaDrawer.selectedModule;   
+    $('#packageInfo #currentPackageLink a').attr('href', npmLink)
 
     $('#packageInfo').show(300);
+
+    var detailView = $('#packageDetailView');
     detailView.show(300);
 
     //Attempt to retrieve locally cached readme:
@@ -78,26 +78,64 @@ function updateDrawer(){
 
       //Load module via AJAX:
       console.log("Requesting module..");
-      $.ajax({
-        url:moduleLink
-      }).done(function(readme){
-
-        console.log("Requesting module success.");
-        detailView.html(readme);
-
-      }).fail(function(er){
-
-        console.log("Requesting module failure");
-        detailView.html("<div class='alert alert-error'>There was a problem loading this readme.</div>");
-
+      
+      fetchBundle(metaDrawer.selectedModule, null, function(er, readme){
+        if(!er){
+          console.log("Requesting module success.");
+          $('#packageDetailView').html(readme);
+        }else{
+          console.log("Error returned from sandbox: "+er);
+        }
       });
+
+      // $.ajax({
+      //   url:moduleLink
+      // }).done(function(readme){
+
+      //   console.log("Requesting module success.");
+      //   detailView.html(readme);
+
+      // }).fail(function(er){
+
+      //   console.log("Requesting module failure");
+      //   detailView.html("<div class='alert alert-error'>There was a problem loading this readme.</div>");
+
+      // });
     }
   }
 }
 
-function loadingView(){
+function fetchBundle(bundleName, preferredVersions, cb){
 
-}
-function hideLoadingView(){
+  if(metaDrawer.sandbox){
+    var sandbox = metaDrawer.sandbox;
+    sandbox.on('modules', function(packages){
 
+      //Find the requested package:
+      for(var pack = 0, len = packages.length; pack < len; pack++){
+        if(packages[pack]["name"] === bundleName){
+          cb(null, JSON.stringify(packages[pack]));
+          //detailView.html(JSON.stringify(packages[pack], null, '\t'));
+          break;
+        }
+      }
+    })
+
+    sandbox.on('bundleEnd', function(html){
+
+      if(sandbox.cache){
+        console.log("Requesting sandbox cache bundle");
+       // sandbox.cache.get(bundleName, cb);
+      }else{
+        console.log("uhhh... sandbox cache get is not truthy?")
+      }
+
+    })
+
+    console.log("Requesting :"+bundleName);
+    var er = sandbox.bundle(editor.editor.getValue())
+    if(er){
+      console.log("Sandbox error: "+er)
+    }
+  }
 }
